@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Emberwake — The Hearthstone Thief</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<script type="importmap">
+{ "imports": { "three": "./vendor/three/build/three.module.js", "three/addons/": "./vendor/three/examples/jsm/" } }
+</script>
+</head>
+<body>
+<div id="game"></div>
+
+<!-- Loading -->
+<div id="loading" class="screen">
+  <div class="logo">EMBERWAKE</div>
+  <div class="loadbar"><div id="load-fill"></div></div>
+  <div id="load-msg">Kindling…</div>
+</div>
+
+<!-- Title -->
+<div id="title" class="screen hidden">
+  <div class="title-wrap">
+    <div class="ember-sigil">✦</div>
+    <h1>EMBERWAKE</h1>
+    <h2>Book One · The Hearthstone Thief</h2>
+    <p class="tagline">A foundling. A stolen fire. A cold that should have stayed asleep.</p>
+    <div class="menu">
+      <button id="btn-new">New Journey</button>
+      <button id="btn-continue">Continue</button>
+      <button id="btn-controls">Controls</button>
+    </div>
+    <div id="controls-pop" class="hidden controls">
+      <div><kbd>W A S D</kbd> Move</div><div><kbd>Mouse</kbd> Look</div>
+      <div><kbd>Shift</kbd> Sprint</div><div><kbd>Space</kbd> Jump</div>
+      <div><kbd>LMB</kbd>/<kbd>F</kbd> Strike (chain 3)</div><div><kbd>RMB</kbd>/<kbd>C</kbd> Roll (dodge)</div>
+      <div><kbd>Q</kbd> Kindle bolt</div><div><kbd>E</kbd> Interact / Talk</div>
+      <div><kbd>1</kbd> Healing Draught</div><div><kbd>2</kbd> Ember Tonic</div>
+      <div><kbd>Tab</kbd> Character</div><div><kbd>J</kbd> Journal · <kbd>M</kbd> Map</div>
+      <div><kbd>Wheel</kbd> Zoom</div><div><kbd>Esc</kbd> Pause</div>
+    </div>
+  </div>
+  <div class="credit">An original fantasy · Characters by Kay Lousberg (KayKit, CC0) · Built with three.js</div>
+</div>
+
+<!-- HUD -->
+<div id="hud" class="hidden">
+  <div id="vitals">
+    <div class="lvlbadge"><span id="lvl">1</span></div>
+    <div class="bars">
+      <div class="bar hp"><div id="hp-fill" class="fill"></div><span id="hp-txt"></span></div>
+      <div class="bar mp"><div id="mp-fill" class="fill"></div><span id="mp-txt"></span></div>
+      <div class="bar st"><div id="st-fill" class="fill"></div></div>
+    </div>
+  </div>
+  <div id="goldbox">◉ <span id="gold">0</span></div>
+
+  <div id="tracker">
+    <div class="tlabel">Quest</div>
+    <div id="q-title"></div>
+    <div id="q-obj"></div>
+  </div>
+
+  <div id="mapwrap">
+    <canvas id="minimap" width="180" height="180"></canvas>
+    <div id="compass">N</div>
+  </div>
+  <div id="region"></div>
+
+  <div id="hotbar">
+    <div class="slot" id="slot-attack"><div class="ico">⚔</div><kbd>LMB</kbd></div>
+    <div class="slot" id="slot-roll"><div class="ico">↻</div><kbd>RMB</kbd></div>
+    <div class="slot" id="slot-cast"><div class="ico fire">✹</div><kbd>Q</kbd><div class="cd" id="cd-cast"></div></div>
+    <div class="slot"><div class="ico red">⚗</div><kbd>1</kbd><span class="cnt" id="cnt-potion">0</span></div>
+    <div class="slot"><div class="ico blue">⚱</div><kbd>2</kbd><span class="cnt" id="cnt-tonic">0</span></div>
+  </div>
+  <div id="xpbar"><div id="xp-fill"></div></div>
+
+  <div id="bossbar" class="hidden"><div class="bname">The Cinder Warden</div><div class="btrack"><div id="boss-fill"></div></div></div>
+  <div id="prompt" class="hidden"><kbd>E</kbd> <span id="prompt-text"></span></div>
+  <div id="notes"></div>
+  <div id="banner"><div id="banner-title"></div><div class="rule"></div><div id="banner-sub"></div></div>
+</div>
+<div id="worldui"></div>
+<div id="floats"></div>
+<div id="hurt"></div>
+<div id="lowhp"></div>
+<div id="clickhint" class="hidden">Click to take control</div>
+
+<!-- Dialogue -->
+<div id="dialogue" class="hidden">
+  <div class="dlg-box">
+    <div id="dlg-who"></div>
+    <div id="dlg-text"></div>
+    <div id="dlg-choices"></div>
+  </div>
+</div>
+
+<!-- Panels -->
+<div id="panels" class="hidden">
+  <div id="inventory" class="panel hidden">
+    <div class="phead">Character <button data-close>✕</button></div>
+    <div class="pcols"><div id="inv-stats"></div><div id="inv-items"></div></div>
+  </div>
+  <div id="journal" class="panel hidden">
+    <div class="phead">Journal <button data-close>✕</button></div>
+    <div id="journal-body"></div>
+  </div>
+  <div id="worldmap" class="panel hidden">
+    <div class="phead">The Riven Vales <button data-close>✕</button></div>
+    <canvas id="bigmap" width="600" height="600"></canvas>
+  </div>
+  <div id="shop" class="panel hidden">
+    <div class="phead">Hollis's Forge <span class="shopgold">◉ <span id="shop-gold"></span></span> <button data-close>✕</button></div>
+    <div id="shop-list"></div>
+  </div>
+  <div id="pause" class="panel hidden small">
+    <div class="phead">Paused</div>
+    <div class="menu">
+      <button id="btn-resume">Resume</button>
+      <button id="btn-save">Save Game</button>
+      <button id="btn-quality">Graphics: High</button>
+      <button id="btn-music">Music: On</button>
+      <button id="btn-quit">Save &amp; Quit to Title</button>
+    </div>
+    <div class="controls mini">
+      <div><kbd>WASD</kbd> Move · <kbd>Shift</kbd> Sprint · <kbd>Space</kbd> Jump</div>
+      <div><kbd>LMB</kbd> Strike · <kbd>RMB</kbd> Roll · <kbd>Q</kbd> Kindle · <kbd>E</kbd> Interact</div>
+      <div><kbd>1</kbd>/<kbd>2</kbd> Draught/Tonic · <kbd>Tab</kbd> Character · <kbd>J</kbd> Journal · <kbd>M</kbd> Map</div>
+    </div>
+  </div>
+</div>
+
+<div id="death" class="screen hidden">
+  <h1 class="red">You Have Fallen</h1>
+  <p>The vales grow colder. But the ember within you has not gone out.</p>
+  <button id="btn-respawn">Rise Again in Millbrook</button>
+</div>
+
+<div id="ending" class="screen hidden">
+  <h1>Act I · The Cold Shrine</h1>
+  <div id="ending-text"></div>
+  <button id="ending-btn">Continue Exploring</button>
+  <div class="tbc">To be continued in Act II · The Gloamreach</div>
+</div>
+
+<script type="module" src="src/main.js"></script>
+</body>
+</html>
